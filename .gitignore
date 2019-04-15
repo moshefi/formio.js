@@ -1,6 +1,5 @@
 _site
 lib
-dist
 dump.rdb
 .DS_Store
 .bower.json

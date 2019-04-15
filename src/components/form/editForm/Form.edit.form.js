@@ -16,15 +16,6 @@ export default [
     tooltip: 'The form to load within this form component.'
   },
   {
-    type: 'textfield',
-    input: true,
-    label: 'Form Revision',
-    placeholder: 'Current',
-    tooltip: 'You can lock the nested form to a specific revision by entering the revision number here.',
-    key: 'formRevision',
-    weight: 11,
-  },
-  {
     type: 'checkbox',
     input: true,
     weight: 20,

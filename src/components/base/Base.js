@@ -906,7 +906,7 @@ export default class BaseComponent extends Component {
     const allowReorder = this.allowReorder;
     this.inputs = [];
     this.tbody.innerHTML = '';
-    values = (values && values.length > 0) ? values : this.dataValue;
+    values = values || this.dataValue;
     _.each(values, (value, index) => {
       const tr = this.ce('tr');
       if (allowReorder) {
@@ -1461,7 +1461,7 @@ export default class BaseComponent extends Component {
   destroyInputs() {
     _.each(this.inputs, (input) => {
       input = this.performInputMapping(input);
-      if (input.mask && input.mask.destroy) {
+      if (input.mask) {
         input.mask.destroy();
       }
       if (input.widget) {
@@ -2258,7 +2258,7 @@ export default class BaseComponent extends Component {
 
     // Calculate the new value.
     const calculatedValue = this.evaluate(this.component.calculateValue, {
-      value: this.defaultValue,
+      value: [],
       data
     }, 'value');
 
@@ -2651,7 +2651,7 @@ export default class BaseComponent extends Component {
       type: this.component.inputType || 'text',
       class: 'form-control',
       lang: this.options.language,
-      id: this.key || this.id
+      id: `${this.component.id}_input`
     };
 
     if (this.component.placeholder) {

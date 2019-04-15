@@ -183,7 +183,9 @@ export default class SelectComponent extends BaseComponent {
       if (this.choices) {
         // Add the currently selected choices if they don't already exist.
         const currentChoices = Array.isArray(this.dataValue) ? this.dataValue : [this.dataValue];
-        return this.addCurrentChoices(currentChoices, items);
+        return currentChoices.reduce((defaultAdded, choice) => {
+          return (this.addCurrentChoices(choice, items) || defaultAdded);
+        }, false);
       }
       else if (!this.component.multiple) {
         this.addPlaceholder(this.selectInput);
@@ -281,7 +283,6 @@ export default class SelectComponent extends BaseComponent {
         _.isEqual(this.currentItems[1], items[1])
       ) {
         this.stopInfiniteScroll();
-        this.loading = false;
         return;
       }
 
@@ -414,10 +415,9 @@ export default class SelectComponent extends BaseComponent {
     this.loading = true;
     Formio.makeRequest(this.options.formio, 'select', url, method, body, options)
       .then((response) => {
-        this.loading = false;
         const scrollTop = !this.scrollLoading && (this.currentItems.length === 0);
         this.setItems(response, !!search);
-        if (scrollTop && this.choices) {
+        if (scrollTop) {
           this.choices.choiceList.scrollToTop();
         }
       })
@@ -754,17 +754,9 @@ export default class SelectComponent extends BaseComponent {
    * @param {*} value
    * @param {Array} items
    */
-  addCurrentChoices(values, items, keyValue) {
-    if (!values) {
-      return false;
-    }
-    const notFoundValuesToAdd = [];
-    const added = values.reduce((defaultAdded, value) => {
-      if (!value) {
-        return defaultAdded;
-      }
+  addCurrentChoices(value, items) {
+    if (value) {
       let found = false;
-
       // Make sure that `items` and `this.selectOptions` points
       // to the same reference. Because `this.selectOptions` is
       // internal property and all items are populated by
@@ -778,34 +770,26 @@ export default class SelectComponent extends BaseComponent {
             found = true;
             return false;
           }
-          const itemValue = keyValue ? choice.value : this.itemValue(choice, isSelectOptions);
-          found |= _.isEqual(itemValue, value);
+          found |= _.isEqual(this.itemValue(choice, isSelectOptions), value);
           return found ? false : true;
         });
       }
 
       // Add the default option if no item is found.
       if (!found) {
-        notFoundValuesToAdd.push({
-          value: this.itemValue(value),
-          label: this.itemTemplate(value)
-        });
+        if (this.choices) {
+          this.choices.setChoices([{
+            value: this.itemValue(value),
+            label: this.itemTemplate(value)
+          }], 'value', 'label', true);
+        }
+        else {
+          this.addOption(this.itemValue(value), this.itemTemplate(value));
+        }
         return true;
       }
-      return found || defaultAdded;
-    }, false);
-
-    if (notFoundValuesToAdd.length) {
-      if (this.choices) {
-        this.choices.setChoices(notFoundValuesToAdd, 'value', 'label');
-      }
-      else {
-        notFoundValuesToAdd.map(notFoundValue => {
-          this.addOption(notFoundValue.value, notFoundValue.label);
-        });
-      }
     }
-    return added;
+    return false;
   }
 
   getView(data) {
@@ -892,10 +876,10 @@ export default class SelectComponent extends BaseComponent {
         this.choices.removeActiveItems();
         // Add the currently selected choices if they don't already exist.
         const currentChoices = Array.isArray(this.dataValue) ? this.dataValue : [this.dataValue];
-        if (!this.addCurrentChoices(currentChoices, this.selectOptions, true)) {
-          this.choices.setChoices(this.selectOptions, 'value', 'label', true);
-        }
-        this.choices.setChoiceByValue(value);
+        _.each(currentChoices, (choice) => {
+          this.addCurrentChoices(choice, this.selectOptions);
+        });
+        this.choices.setChoices(this.selectOptions, 'value', 'label', true).setChoiceByValue(value);
       }
       else if (hasPreviousValue) {
         this.choices.removeActiveItems();

@@ -430,8 +430,7 @@ export default class Formio {
     if (!token) {
       return Promise.reject('You must be authenticated to generate a temporary auth token.');
     }
-    const authUrl = Formio.authUrl || this.projectUrl;
-    return this.makeRequest('tempToken', `${authUrl}/token`, 'GET', null, {
+    return this.makeRequest('tempToken', `${this.projectUrl}/token`, 'GET', null, {
       ignoreCache: true,
       header: new Headers({
         'x-expire': expire,
@@ -704,7 +703,7 @@ export default class Formio {
     const cacheKey = btoa(url);
 
     // Get the cached promise to save multiple loads.
-    if (!Formio.ignoreCache && !opts.ignoreCache && method === 'GET' && Formio.cache.hasOwnProperty(cacheKey)) {
+    if (!opts.ignoreCache && method === 'GET' && Formio.cache.hasOwnProperty(cacheKey)) {
       return Promise.resolve(_cloneDeep(Formio.cache[cacheKey]));
     }
 
@@ -828,7 +827,7 @@ export default class Formio {
         }
 
         // Cache the response.
-        if (!Formio.ignoreCache && (method === 'GET')) {
+        if (method === 'GET') {
           Formio.cache[cacheKey] = _cloneDeep(result);
         }
 
@@ -1006,10 +1005,6 @@ export default class Formio {
     Formio.projectUrlSet = true;
   }
 
-  static setAuthUrl(url) {
-    Formio.authUrl = url;
-  }
-
   static getAppUrl() {
     console.warn('Formio.getAppUrl() is deprecated. Use Formio.getProjectUrl instead.');
     return Formio.projectUrl;
@@ -1094,15 +1089,12 @@ export default class Formio {
   }
 
   static currentUser(formio, options) {
-    let authUrl = Formio.authUrl;
-    if (!authUrl) {
-      authUrl = formio ? formio.projectUrl : (Formio.projectUrl || Formio.baseUrl);
-    }
-    authUrl += '/current';
+    let projectUrl = formio ? formio.projectUrl : (Formio.projectUrl || Formio.baseUrl);
+    projectUrl += '/current';
     const user = Formio.getUser(options);
     if (user) {
       return Formio.pluginAlter('wrapStaticRequestPromise', Promise.resolve(user), {
-        url: authUrl,
+        url: projectUrl,
         method: 'GET',
         options
       });
@@ -1110,12 +1102,12 @@ export default class Formio {
     const token = Formio.getToken(options);
     if ((!options || !options.external) && !token) {
       return Formio.pluginAlter('wrapStaticRequestPromise', Promise.resolve(null), {
-        url: authUrl,
+        url: projectUrl,
         method: 'GET',
         options
       });
     }
-    return Formio.makeRequest(formio, 'currentUser', authUrl, 'GET', null, options)
+    return Formio.makeRequest(formio, 'currentUser', projectUrl, 'GET', null, options)
       .then((response) => {
         Formio.setUser(response, options);
         return response;
@@ -1128,7 +1120,7 @@ export default class Formio {
     Formio.setToken(null, options);
     Formio.setUser(null, options);
     Formio.clearCache();
-    const projectUrl = Formio.authUrl ? Formio.authUrl : (formio ? formio.projectUrl : Formio.baseUrl);
+    const projectUrl = formio ? formio.projectUrl : Formio.baseUrl;
     return Formio.makeRequest(formio, 'logout', `${projectUrl}/logout`);
   }
 
@@ -1192,8 +1184,7 @@ export default class Formio {
     }
 
     // go to the saml sso endpoint for this project.
-    const authUrl = Formio.authUrl || Formio.projectUrl;
-    window.location.href = `${authUrl}/saml/sso?relay=${encodeURI(options.relay)}`;
+    window.location.href = `${Formio.projectUrl}/saml/sso?relay=${encodeURI(options.relay)}`;
     return false;
   }
 
@@ -1334,14 +1325,12 @@ export default class Formio {
 }
 
 // Define all the static properties.
-Formio.ignoreCache = false;
 Formio.libraries = {};
 Formio.Promise = Promise;
 Formio.fetch = fetch;
 Formio.Headers = Headers;
 Formio.baseUrl = 'https://api.form.io';
 Formio.projectUrl = Formio.baseUrl;
-Formio.authUrl = '';
 Formio.projectUrlSet = false;
 Formio.plugins = [];
 Formio.cache = {};
